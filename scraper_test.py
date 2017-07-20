@@ -154,39 +154,34 @@ class TestScraper(unittest.TestCase):
             </body>
             """),
             io.StringIO("empty second page"))
-        root = "/root/?foo=bar"
+        root = "http:///root/?foo=bar"
         pages = list(self._scraper._CollectPages(root))
         self.assertSequenceEqual(
             ("http://www.college-de-france.fr/site/url1",
              "http://www.college-de-france.fr/site/url2"),
             pages)
-        mock_url_open.assert_has_calls((
-            call(root + "&index=0", headers=self._headers),
-            call(root + "&index=2", headers=self._headers)))
+        self.assertEqual(2, mock_url_open.call_count)
 
     def test_already_scraped(self, mock_url_open):
         mock_url_open.return_value = self._page_io
         self._mock_client.get.return_value = "something not None"
-        stop_when_present, _ = self._scraper._ParsePage("/page/url")
+        stop_when_present, _ = self._scraper._ParsePage("http:///page/url")
         self.assertTrue(stop_when_present)
-        mock_url_open.assert_called_once_with("/page/url", headers=self._headers)
         self._mock_client.put.assert_not_called()
 
     def testNoAudioLink(self, mock_url_open):
         mock_url_open.return_value = io.StringIO("an empty page")
         self._mock_client.get.return_value = "something not None"
-        stop_when_present, _ = self._scraper._ParsePage("/page/url")
+        stop_when_present, _ = self._scraper._ParsePage("http:///page/url")
         self.assertFalse(stop_when_present)
-        mock_url_open.assert_called_once_with("/page/url", headers=self._headers)
         self._mock_client.put.assert_not_called()
 
     def testSavesEntity(self, mock_url_open):
         mock_url_open.return_value = self._page_io
         self._mock_client.get.return_value = None
-        stop_when_present, ent = self._scraper._ParsePage("/page/url")
-        mock_url_open.assert_called_once_with("/page/url", headers=self._headers)
+        stop_when_present, ent = self._scraper._ParsePage("http:///page/url")
         self._mock_client.put.assert_called_once_with(ent)
-        self.assertEqual("/page/url", ent["source"])
+        self.assertEqual("http:///page/url", ent["source"])
         self.assertTrue(ent["scraped"])
         self.assertEqual("Pour une culture juridique européenne", ent["title"])
         self.assertEqual('Alain Wijffels', ent["lecturer"])

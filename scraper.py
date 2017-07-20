@@ -24,8 +24,10 @@ class Scraper(object):
     def Run(self, root_url):
         print("Starting collection of pages from root URL", root_url)
         for page in self._CollectPages(root_url):
-            if not self._ParsePage(page):
+            should_break, entity = self._ParsePage(page)
+            if should_break:
                 break
+            print("Saved entity:", entity)
 
     def _ParsePage(self, page_url):
         """Parses a single page containing a lecture.
@@ -35,7 +37,8 @@ class Scraper(object):
         """
         print("Parsing page", page_url)
         resp = request.urlopen(
-            page_url, headers={'User-Agent': self._user_agent})
+            request.Request(
+                page_url, headers={'User-Agent': self._user_agent}))
         s = BeautifulSoup(resp.read(), "html.parser")
         # Skip lessons without audio.
         audio_link = s.find("li", "audio")
@@ -86,8 +89,9 @@ class Scraper(object):
         num_pages = 0
         while maybe_more_content:
             resp = request.urlopen(
-                url + "&index=" + str(num_pages),
-                headers={'User-Agent': self._user_agent})
+                request.Request(
+                    url + "&index=" + str(num_pages),
+                    headers={'User-Agent': self._user_agent}))
             s = BeautifulSoup(resp.read(), "html.parser")
             maybe_more_content = False
             for link in s.find_all("a"):

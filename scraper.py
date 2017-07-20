@@ -8,8 +8,17 @@ import locale
 from bs4 import BeautifulSoup
 from google.cloud import datastore
 
-def ParsePage(client, page_url):
-    """Parses a single page containing a lecture."""
+def ParsePage(client, page_url, stop_when_present):
+    """Parses a single page containing a lecture.
+
+    Args:
+        client: a datastore.Client instance
+        page_url: the url of the page to parse
+        stop_when_present: whether to stop the crawl when the url has already been imported in the DB
+
+    Returns:
+        A tuple (bool, entity) that contains whether the crawl should stop and the entity that was imported in the DB if any.
+    """
     print("Parsing page", page_url)
     resp = request.urlopen(page_url)
     s = BeautifulSoup(resp.read(), "html.parser")
@@ -17,13 +26,13 @@ def ParsePage(client, page_url):
     audio_link = s.find("li", "audio")
     if not audio_link:
         print("No audio link @", page_url)
-        return
+        return False, None
     audio_link = audio_link.find("a").get("href")
     key = client.key('Entry', audio_link)
     # If we already have it, skip.
     if client.get(key):
         print("Already saved", audio_link)
-        return
+        return stop_when_present, None
     entity = datastore.Entity(
         key,
         exclude_from_indexes=["video_link", "audio_link", "source"])
@@ -48,7 +57,7 @@ def ParsePage(client, page_url):
     if video_link:
         entity["video_link"] = video_link.find("a").get("href")
     client.put(entity)
-    return entity
+    return False, entity
 
 def CollectPages(url):
     """Collect pages with audio in them from the given root url.
@@ -74,6 +83,7 @@ def CollectPages(url):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--project_id", help="Google Cloud Project ID.")
+    parser.add_argument("--stop_when_present", help="Stop crawl when the first already imported item is found (useful after the first run).")
     parser.add_argument("--root_url", help="Root URL to start the crawl from.", default="http://www.college-de-france.fr/components/search-audiovideo.jsp?fulltext=&siteid=1156951719600&lang=FR&type=audio")
     args = parser.parse_args()
 
@@ -82,4 +92,5 @@ if __name__ == "__main__":
     client = datastore.Client(args.project_id)
     print("Starting collection of pages from root URL", args.root_url)
     for page in CollectPages(args.root_url):
-        ParsePage(client, page)
+        if not ParsePage(client, page, args.stop_when_present):
+            break

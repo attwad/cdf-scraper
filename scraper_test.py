@@ -164,21 +164,31 @@ class TestParsePage(unittest.TestCase):
     def testAlreadyScraped(self, mock_client, mock_url_open):
         mock_url_open.return_value = self._page_io
         mock_client.get.return_value = "something not None"
-        scraper.ParsePage(mock_client, "/page/url")
+        stop_when_present, _ = scraper.ParsePage(mock_client, "/page/url", True)
+        self.assertTrue(stop_when_present)
+        mock_url_open.assert_called_once_with("/page/url")
+        mock_client.put.assert_not_called()
+
+    def testAlreadyScrapedNotStopping(self, mock_client, mock_url_open):
+        mock_url_open.return_value = self._page_io
+        mock_client.get.return_value = "something not None"
+        stop_when_present, _ = scraper.ParsePage(mock_client, "/page/url", False)
+        self.assertFalse(stop_when_present)
         mock_url_open.assert_called_once_with("/page/url")
         mock_client.put.assert_not_called()
 
     def testNoAudioLink(self, mock_client, mock_url_open):
         mock_url_open.return_value = io.StringIO("an empty page")
         mock_client.get.return_value = "something not None"
-        scraper.ParsePage(mock_client, "/page/url")
+        stop_when_present, _ = scraper.ParsePage(mock_client, "/page/url", True)
+        self.assertFalse(stop_when_present)
         mock_url_open.assert_called_once_with("/page/url")
         mock_client.put.assert_not_called()
 
     def testSavesEntity(self, mock_client, mock_url_open):
         mock_url_open.return_value = self._page_io
         mock_client.get.return_value = None
-        ent = scraper.ParsePage(mock_client, "/page/url")
+        stop_when_present, ent = scraper.ParsePage(mock_client, "/page/url", True)
         mock_url_open.assert_called_once_with("/page/url")
         mock_client.put.assert_called_once_with(ent)
         self.assertEqual("/page/url", ent["source"])

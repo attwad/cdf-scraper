@@ -18,7 +18,8 @@ class TestScraper(unittest.TestCase):
         self._scraper = scraper.Scraper(
             self._mock_client,
             True, # stop_when_present
-            'Morzina')
+            'Morzina',
+            False) # dry_run
         self._headers = {'User-Agent': 'Morzina'}
         # HTML copy pasted almost verbatim (minus noisy head tags).
         self._page_io = io.StringIO("""

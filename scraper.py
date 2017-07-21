@@ -10,16 +10,18 @@ from google.cloud import datastore
 
 
 class Scraper(object):
-    def __init__(self, client, stop_when_present, user_agent):
+    def __init__(self, client, stop_when_present, user_agent, dry_run):
         """
         Args:
             client: a datastore.Client instance
             page_url: the url of the page to parse
-            stop_when_present: whether to stop the crawl when the url has already been imported in the DB
+            stop_when_present: whether to stop the crawl when the url has already been imported in the datastore
+            dry_run: dry run will not import scraped pages into the datastore.
         """
         self._client = client
         self._stop_when_present = stop_when_present
         self._user_agent = user_agent
+        self._dry_run = dry_run
 
     def Run(self, root_url):
         print("Starting collection of pages from root URL", root_url)
@@ -33,7 +35,7 @@ class Scraper(object):
         """Parses a single page containing a lecture.
 
         Returns:
-            A tuple (bool, entity) that contains whether the crawl should stop and the entity that was imported in the DB if any.
+            A tuple (bool, entity) that contains whether the crawl should stop and the entity that was imported in the datastore if any.
         """
         print("Parsing page", page_url)
         resp = request.urlopen(
@@ -74,7 +76,10 @@ class Scraper(object):
         video_link = s.find("li", "video")
         if video_link:
             entity["video_link"] = video_link.find("a").get("href")
-        self._client.put(entity)
+        if not self._dry_run:
+            self._client.put(entity)
+        else:
+            print("[dry run]", entity)
         return False, entity
 
     def _CollectPages(self, url):
@@ -104,6 +109,7 @@ class Scraper(object):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--project_id", help="Google Cloud Project ID.")
+    parser.add_argument("--dry_run", help="Dry runs will not import parsed pages in the datastore.")
     parser.add_argument("--user_agent", help="user agent string to use, be nice and tell other people why they are being scraped.")
     parser.add_argument("--stop_when_present", help="Stop crawl when the first already imported item is found (useful after the first run).")
     parser.add_argument("--root_url", help="Root URL to start the crawl from.", default="http://www.college-de-france.fr/components/search-audiovideo.jsp?fulltext=&siteid=1156951719600&lang=FR&type=audio")
@@ -112,5 +118,5 @@ if __name__ == "__main__":
     locale.setlocale(locale.LC_ALL, 'fr_FR.UTF-8')
     print("Creating client for project", args.project_id)
     client = datastore.Client(args.project_id)
-    s = Scraper(client, args.stop_when_present, args.user_agent)
+    s = Scraper(client, args.stop_when_present, args.user_agent, args.dry_run)
     s.Run(args.root_url)

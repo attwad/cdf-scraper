@@ -48,10 +48,17 @@ class Scraper(object):
             print("No audio link @", page_url)
             return False, None
         audio_link = audio_link.find("a").get("href")
-        key = self._client.key('Entry', audio_link)
+        # Find key parts.
+        lecturer = list(s.find("h3", "lecturer").children)[0]
+        date = s.find("span", "day").text.strip()
+        hour_start = s.find("span", "from")
+        # A single person cannot give two lessons starting at the same time
+        # so hopefully this is a less brittle proxy than the audio link that
+        # could change anytime.
+        key = self._client.key('Entry', [lecturer, date, hour_start])
         # If we already have it, skip.
         if self._client.get(key):
-            print("Already saved", audio_link)
+            print("Already saved", page_url)
             return self._stop_when_present, None
         entity = datastore.Entity(
             key,
@@ -60,12 +67,11 @@ class Scraper(object):
             "source": page_url,
             "scraped": datetime.datetime.utcnow(),
             "title": s.find(id="title").text.strip(),
-            "lecturer": list(s.find("h3", "lecturer").children)[0],
+            "lecturer": lecturer,
             "function": list(s.find("h3", "lecturer").children)[1].text.strip(),
             # Day is like "29 Juin 2017"
             # The locale needs to be set to fr_FR for this to work.
-            "date": time.strptime(
-            s.find("span", "day").text.strip(), "%d %B %Y"),
+            "date": time.strptime(date, "%d %B %Y"),
             "lesson_type": s.find("span", "type").text.strip(),
             "audio_link": audio_link,
             # Audio links ends like "foo-bar-fr.mp3", language is at the end.

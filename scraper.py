@@ -68,10 +68,6 @@ class Scraper(object):
         entity = datastore.Entity(
             key,
             exclude_from_indexes=["VideoLink", "AudioLink", "source"])
-        try:
-            function = list(s.find("h3", "lecturer").children)[1].text.strip()
-        except IndexError as ie:
-            function = ""
         entity.update({
             "Source": page_url,
             # A random seed to be able to schedule random items.
@@ -79,7 +75,6 @@ class Scraper(object):
             "Scraped": datetime.datetime.utcnow(),
             "Title": s.find(id="title").text.strip(),
             "Lecturer": lecturer,
-            "Function": function,
             "LessonType": s.find("h4").text.strip(),
             # Day is like "29 Juin 2017"
             # The locale needs to be set to fr_FR for this to work.
@@ -90,6 +85,13 @@ class Scraper(object):
             "Language": audio_link[audio_link.rfind("-")+1:-4],
             "Chaire": s.find("div", "chair-baseline").text.strip(),
         })
+
+        try:
+            entity["Function"] = list(
+                s.find("h3", "lecturer").children)[1].text.strip()
+        except IndexError as ie:
+            # No function, okay.
+            pass
 
         video_link = s.find("li", "video")
         if video_link:

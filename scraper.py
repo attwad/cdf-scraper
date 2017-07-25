@@ -4,6 +4,7 @@ import argparse
 import time
 import datetime
 import locale
+import hashlib
 
 from bs4 import BeautifulSoup
 from google.cloud import datastore
@@ -49,7 +50,11 @@ class Scraper(object):
             return False, None
         audio_link = audio_link.find("a").get("href")
         # Find key parts.
-        lecturer = list(s.find("h3", "lecturer").children)[0]
+        try:
+            lecturer = list(s.find("h3", "lecturer").children)[0]
+        except IndexError:
+            logging.info("No lecturer found, skipping:")
+            return False, None
         date = s.find("span", "day").text.strip()
         hour_start = s.find("span", "from")
         # A single person cannot give two lessons starting at the same time
@@ -62,26 +67,33 @@ class Scraper(object):
             return self._stop_when_present, None
         entity = datastore.Entity(
             key,
-            exclude_from_indexes=["video_link", "audio_link", "source"])
+            exclude_from_indexes=["VideoLink", "AudioLink", "source"])
+        try:
+            function = list(s.find("h3", "lecturer").children)[1].text.strip()
+        except IndexError as ie:
+            function = ""
         entity.update({
-            "source": page_url,
-            "scraped": datetime.datetime.utcnow(),
-            "title": s.find(id="title").text.strip(),
-            "lecturer": lecturer,
-            "function": list(s.find("h3", "lecturer").children)[1].text.strip(),
+            "Source": page_url,
+            # A random seed to be able to schedule random items.
+            "Hash": hashlib.sha1(page_url.encode("utf-8")).digest(),
+            "Scraped": datetime.datetime.utcnow(),
+            "Title": s.find(id="title").text.strip(),
+            "Lecturer": lecturer,
+            "Function": function,
+            "LessonType": s.find("h4").text.strip(),
             # Day is like "29 Juin 2017"
             # The locale needs to be set to fr_FR for this to work.
-            "date": time.strptime(date, "%d %B %Y"),
-            "lesson_type": s.find("span", "type").text.strip(),
-            "audio_link": audio_link,
+            "Date": time.strptime(date, "%d %B %Y"),
+            "LessonType": s.find("span", "type").text.strip(),
+            "AudioLink": audio_link,
             # Audio links ends like "foo-bar-fr.mp3", language is at the end.
-            "language": audio_link[audio_link.rfind("-")+1:-4],
-            "chaire": s.find("div", "chair-baseline").text.strip(),
+            "Language": audio_link[audio_link.rfind("-")+1:-4],
+            "Chaire": s.find("div", "chair-baseline").text.strip(),
         })
 
         video_link = s.find("li", "video")
         if video_link:
-            entity["video_link"] = video_link.find("a").get("href")
+            entity["VideoLink"] = video_link.find("a").get("href")
         if not self._dry_run:
             self._client.put(entity)
         else:

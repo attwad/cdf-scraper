@@ -182,19 +182,19 @@ class TestScraper(unittest.TestCase):
         self._mock_client.get.return_value = None
         stop_when_present, ent = self._scraper._ParsePage("http:///page/url")
         self._mock_client.put.assert_called_once_with(ent)
-        self.assertEqual("http:///page/url", ent["source"])
-        self.assertTrue(ent["scraped"])
-        self.assertEqual("Pour une culture juridique européenne", ent["title"])
-        self.assertEqual('Alain Wijffels', ent["lecturer"])
+        self.assertEqual("http:///page/url", ent["Source"])
+        self.assertTrue(ent["Scraped"])
+        self.assertEqual("Pour une culture juridique européenne", ent["Title"])
+        self.assertEqual('Alain Wijffels', ent["Lecturer"])
         self.assertEqual(
             "Historien du droit, Professeur aux universités de Leyde, Louvain "
-            "et Louvain-la-Neuve, directeur de recherche CNRS", ent["function"])
+            "et Louvain-la-Neuve, directeur de recherche CNRS", ent["Function"])
         self.assertEqual(time.struct_time([2017, 6, 29, 0, 0, 0, 3, 180, -1]),
-                         ent["date"])
-        self.assertEqual("Leçon de clôture", ent["lesson_type"])
-        self.assertEqual("http://www.college-de-france.fr/audio/alain-wijffels/2017/alain-wijffels.2017-06-29-17-00-00-a-fr.mp3", ent["audio_link"])
-        self.assertEqual("fr", ent["language"])
-        self.assertEqual("Chaire Européenne (2016-2017)", ent["chaire"])
+                         ent["Date"])
+        self.assertEqual("Leçon de clôture", ent["LessonType"])
+        self.assertEqual("http://www.college-de-france.fr/audio/alain-wijffels/2017/alain-wijffels.2017-06-29-17-00-00-a-fr.mp3", ent["AudioLink"])
+        self.assertEqual("fr", ent["Language"])
+        self.assertEqual("Chaire Européenne (2016-2017)", ent["Chaire"])
 
 
 if __name__ == '__main__':

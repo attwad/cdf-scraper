@@ -52,11 +52,15 @@ class Scraper(object):
         # Find key parts.
         try:
             lecturer = list(s.find("h3", "lecturer").children)[0]
-        except IndexError:
+        except (IndexError, AttributeError):
             logging.info("No lecturer found, skipping:")
             return False, None
         date = s.find("span", "day").text.strip()
         hour_start = s.find("span", "from").text.strip()
+        if not hour_start:
+            # No start hour makes it impossible to create a key.
+            # TODO: should we synthetize one instead then?
+            return False, None
         # A single person cannot give two lessons starting at the same time
         # so hopefully this is a less brittle proxy than the audio link that
         # could change anytime.
@@ -89,7 +93,7 @@ class Scraper(object):
         try:
             entity["Function"] = list(
                 s.find("h3", "lecturer").children)[1].text.strip()
-        except IndexError as ie:
+        except (AttributeError, IndexError):
             # No function, okay.
             pass
 

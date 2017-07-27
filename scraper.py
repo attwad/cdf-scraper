@@ -160,7 +160,7 @@ if __name__ == "__main__":
     parser.add_argument("--project_id", help="Google Cloud Project ID.")
     parser.add_argument("--dry_run", help="Dry runs will not import parsed pages in the datastore.", action="store_true")
     parser.add_argument("--user_agent", help="user agent string to use, be nice and tell other people why they are being scraped.")
-    parser.add_argument("--stop_when_present", help="Stop crawl when the first already imported item is found (useful after the first run).")
+    parser.add_argument("--stop_when_present", help="Stop crawl when the first already imported item is found (useful after the first run).", action="store_true")
     parser.add_argument("--root_url", help="Root URL to start the crawl from.", default="http://www.college-de-france.fr/components/search-audiovideo.jsp?fulltext=&siteid=1156951719600&lang=FR&type=audio")
     args = parser.parse_args()
     logging.basicConfig(format='%(levelname)s %(asctime)s %(message)s', level=logging.DEBUG)

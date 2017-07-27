@@ -87,7 +87,7 @@ class Scraper(object):
         # could change anytime.
         key = self._client.key('Entry', "|".join([lecturer, date, hour_start]))
         # If we already have it, skip.
-        if not self._dry_run and self._client.get(key):
+        if self._client.get(key):
             logging.info("Already saved", page_url)
             self._status["present"] += 1
             return self._stop_when_present, None

@@ -10,6 +10,15 @@ import logging
 from bs4 import BeautifulSoup
 from google.cloud import datastore
 
+def _trimmed_text(node):
+    """Returns the trimmed text contained in the given DOM node or None if
+    empty or if node is None.
+    """
+    try:
+        return node.text.strip() or None
+    except AttributeError:
+        return None
+
 
 class Scraper(object):
     def __init__(self, client, stop_when_present, user_agent, dry_run):
@@ -56,7 +65,11 @@ class Scraper(object):
         except (IndexError, AttributeError):
             logging.info("No lecturer found, skipping")
             return False, None
-        date = s.find("span", "day").text.strip()
+        try:
+            date = s.find("span", "day").text.strip()
+        except AttributeError:
+            logging.info("No date found, skipping")
+            return False, None
         hour_start = s.find("span", "from").text.strip()
         if not hour_start:
             logging.info("No start hour found, skipping")
@@ -78,17 +91,17 @@ class Scraper(object):
             # A random seed to be able to schedule random items.
             "Hash": hashlib.sha1(page_url.encode("utf-8")).digest(),
             "Scraped": datetime.datetime.utcnow(),
-            "Title": s.find(id="title").text.strip(),
+            "Title": _trimmed_text(s.find(id="title")),
+            "TypeTitle": _trimmed_text(s.find("h4")),
+            "LessonType": _trimmed_text(s.find("span", "type")),
             "Lecturer": lecturer,
-            "LessonType": s.find("h4").text.strip(),
             # Day is like "29 Juin 2017"
             # The locale needs to be set to fr_FR for this to work.
             "Date": time.strptime(date, "%d %B %Y"),
-            "LessonType": s.find("span", "type").text.strip(),
             "AudioLink": audio_link,
             # Audio links ends like "foo-bar-fr.mp3", language is at the end.
             "Language": audio_link[audio_link.rfind("-")+1:-4],
-            "Chaire": s.find("div", "chair-baseline").text.strip(),
+            "Chaire": _trimmed_text(s.find("div", "chair-baseline"))
         })
 
         try:

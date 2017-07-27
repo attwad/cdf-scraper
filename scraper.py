@@ -56,11 +56,11 @@ class Scraper(object):
             logging.info("No lecturer found, skipping:")
             return False, None
         date = s.find("span", "day").text.strip()
-        hour_start = s.find("span", "from")
+        hour_start = s.find("span", "from").text.strip()
         # A single person cannot give two lessons starting at the same time
         # so hopefully this is a less brittle proxy than the audio link that
         # could change anytime.
-        key = self._client.key('Entry', [lecturer, date, hour_start])
+        key = self._client.key('Entry', "|".join([lecturer, date, hour_start]))
         # If we already have it, skip.
         if self._client.get(key):
             print("Already saved", page_url)

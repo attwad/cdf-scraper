@@ -1,0 +1,26 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: scraper
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: scraper
+    spec:
+      volumes:
+      - name: google-cloud-key
+        secret:
+          secretName: scraper-datastore-key
+      containers:
+      - name: scraper
+        image: eu.gcr.io/college-de-france/scraper:latest
+        volumeMounts:
+        - name: google-cloud-key
+          mountPath: /var/secrets/google
+        env:
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: /var/secrets/google/key.json
+        command: ["python"]
+        args: ["/scraper/scraper.py", "--project_id=college-de-france", "--user_agent=https://github.com/attwad/cdf-scraper"]

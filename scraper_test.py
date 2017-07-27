@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 import io
 import locale
 import time
+import datetime
 
 import scraper
 from google.cloud import datastore
@@ -190,7 +191,7 @@ class TestScraper(unittest.TestCase):
         self.assertEqual(
             "Historien du droit, Professeur aux universités de Leyde, Louvain "
             "et Louvain-la-Neuve, directeur de recherche CNRS", ent["Function"])
-        self.assertEqual(time.struct_time([2017, 6, 29, 0, 0, 0, 3, 180, -1]),
+        self.assertEqual(datetime.datetime(2017, 6, 29, 0, 0),
                          ent["Date"])
         self.assertEqual("Leçon de clôture", ent["LessonType"])
         self.assertEqual("http://www.college-de-france.fr/audio/alain-wijffels/2017/alain-wijffels.2017-06-29-17-00-00-a-fr.mp3", ent["AudioLink"])

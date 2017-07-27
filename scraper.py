@@ -105,7 +105,8 @@ class Scraper(object):
             "Lecturer": lecturer,
             # Day is like "29 Juin 2017"
             # The locale needs to be set to fr_FR for this to work.
-            "Date": time.strptime(date, "%d %B %Y"),
+            "Date": datetime.datetime.fromtimestamp(
+                time.mktime(time.strptime(date, "%d %B %Y"))),
             "AudioLink": audio_link,
             # Audio links ends like "foo-bar-fr.mp3", language is at the end.
             "Language": audio_link[audio_link.rfind("-")+1:-4],

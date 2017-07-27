@@ -5,6 +5,7 @@ import time
 import datetime
 import locale
 import hashlib
+import logging
 
 from bs4 import BeautifulSoup
 from google.cloud import datastore
@@ -53,12 +54,12 @@ class Scraper(object):
         try:
             lecturer = list(s.find("h3", "lecturer").children)[0]
         except (IndexError, AttributeError):
-            logging.info("No lecturer found, skipping:")
+            logging.info("No lecturer found, skipping")
             return False, None
         date = s.find("span", "day").text.strip()
         hour_start = s.find("span", "from").text.strip()
         if not hour_start:
-            # No start hour makes it impossible to create a key.
+            logging.info("No start hour found, skipping")
             # TODO: should we synthetize one instead then?
             return False, None
         # A single person cannot give two lessons starting at the same time

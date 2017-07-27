@@ -6,6 +6,7 @@ import datetime
 import locale
 import hashlib
 import logging
+import collections
 
 from bs4 import BeautifulSoup
 from google.cloud import datastore
@@ -33,14 +34,16 @@ class Scraper(object):
         self._stop_when_present = stop_when_present
         self._user_agent = user_agent
         self._dry_run = dry_run
+        self._status = collections.Counter()
 
     def Run(self, root_url):
-        print("Starting collection of pages from root URL", root_url)
+        logging.info("Starting collection of pages from root URL %s", root_url)
         for page in self._CollectPages(root_url):
-            should_break, entity = self._ParsePage(page)
-            if should_break:
+            should_break_early, entity = self._ParsePage(page)
+            if should_break_early:
                 break
-            print("Saved entity:", entity)
+            logging.debug("Saved entity: %s", entity)
+            logging.info(self._status)
 
     def _ParsePage(self, page_url):
         """Parses a single page containing a lecture.
@@ -48,7 +51,7 @@ class Scraper(object):
         Returns:
             A tuple (bool, entity) that contains whether the crawl should stop and the entity that was imported in the datastore if any.
         """
-        print("Parsing page", page_url)
+        logging.info("Parsing page %s", page_url)
         resp = request.urlopen(
             request.Request(
                 page_url, headers={'User-Agent': self._user_agent}))
@@ -56,7 +59,8 @@ class Scraper(object):
         # Skip lessons without audio.
         audio_link = s.find("li", "audio")
         if not audio_link:
-            print("No audio link @", page_url)
+            logging.info("No audio link @", page_url)
+            self._status["no_audio"] += 1
             return False, None
         audio_link = audio_link.find("a").get("href")
         # Find key parts.
@@ -64,24 +68,28 @@ class Scraper(object):
             lecturer = list(s.find("h3", "lecturer").children)[0]
         except (IndexError, AttributeError):
             logging.info("No lecturer found, skipping")
+            self._status["no_key"] += 1
             return False, None
         try:
             date = s.find("span", "day").text.strip()
         except AttributeError:
             logging.info("No date found, skipping")
+            self._status["no_key"] += 1
             return False, None
-        hour_start = s.find("span", "from").text.strip()
-        if not hour_start:
+        try:
+            hour_start = s.find("span", "from").text.strip()
+        except AttributeError:
             logging.info("No start hour found, skipping")
-            # TODO: should we synthetize one instead then?
+            self._status["no_key"] += 1
             return False, None
         # A single person cannot give two lessons starting at the same time
         # so hopefully this is a less brittle proxy than the audio link that
         # could change anytime.
         key = self._client.key('Entry', "|".join([lecturer, date, hour_start]))
         # If we already have it, skip.
-        if self._client.get(key):
-            print("Already saved", page_url)
+        if not self._dry_run and self._client.get(key):
+            logging.info("Already saved", page_url)
+            self._status["present"] += 1
             return self._stop_when_present, None
         entity = datastore.Entity(
             key,
@@ -109,15 +117,18 @@ class Scraper(object):
                 s.find("h3", "lecturer").children)[1].text.strip()
         except (AttributeError, IndexError):
             # No function, okay.
+            self._status["no_function"] += 1
             pass
 
         video_link = s.find("li", "video")
         if video_link:
             entity["VideoLink"] = video_link.find("a").get("href")
+            self._status["has_video"] += 1
         if not self._dry_run:
             self._client.put(entity)
         else:
-            print("[dry run]", entity)
+            logging.debug("[dry run] %s", entity)
+        self._status["OK"] += 1
         return False, entity
 
     def _CollectPages(self, url):
@@ -152,9 +163,10 @@ if __name__ == "__main__":
     parser.add_argument("--stop_when_present", help="Stop crawl when the first already imported item is found (useful after the first run).")
     parser.add_argument("--root_url", help="Root URL to start the crawl from.", default="http://www.college-de-france.fr/components/search-audiovideo.jsp?fulltext=&siteid=1156951719600&lang=FR&type=audio")
     args = parser.parse_args()
+    logging.basicConfig(format='%(levelname)s %(asctime)s %(message)s', level=logging.DEBUG)
 
     locale.setlocale(locale.LC_ALL, 'fr_FR.UTF-8')
-    print("Creating client for project", args.project_id)
+    logging.info("Creating client for project %s", args.project_id)
     client = datastore.Client(args.project_id)
     s = Scraper(client, args.stop_when_present, args.user_agent, args.dry_run)
     s.Run(args.root_url)

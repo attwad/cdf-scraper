@@ -185,6 +185,7 @@ class TestScraper(unittest.TestCase):
         self.assertEqual("http:///page/url", ent["Source"])
         self.assertTrue(ent["Scraped"])
         self.assertEqual("Pour une culture juridique européenne", ent["Title"])
+        self.assertEqual("Pour une culture juridique européenne", ent["TypeTitle"])
         self.assertEqual('Alain Wijffels', ent["Lecturer"])
         self.assertEqual(
             "Historien du droit, Professeur aux universités de Leyde, Louvain "

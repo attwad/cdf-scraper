@@ -112,10 +112,16 @@ class Scraper(object):
             "Date": datetime.datetime.fromtimestamp(
                 time.mktime(time.strptime(date, "%d %B %Y"))),
             "AudioLink": audio_link,
-            # Audio links ends like "foo-bar-fr.mp3", language is at the end.
-            "Language": audio_link[audio_link.rfind("-")+1:-4],
             "Chaire": _trimmed_text(s.find("div", "chair-baseline"))
         })
+
+        # Audio links ends like "foo-bar-fr.mp3", language is at the end.
+        # Sometimes it is not specified though... so use a whitelisted length.
+        language = audio_link[audio_link.rfind("-")+1:-4]
+        if len(language) == 2:
+            entity["Language"] = language
+        else:
+            entity["Language"] = "fr"
 
         try:
             entity["Function"] = list(

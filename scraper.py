@@ -22,18 +22,21 @@ def _trimmed_text(node):
 
 
 class Scraper(object):
-    def __init__(self, client, stop_when_present, user_agent, dry_run):
+    def __init__(
+        self, client, stop_when_present, user_agent, dry_run, overwrite):
         """
         Args:
             client: a datastore.Client instance
             page_url: the url of the page to parse
             stop_when_present: whether to stop the crawl when the url has already been imported in the datastore
             dry_run: dry run will not import scraped pages into the datastore.
+            overwrite: whether to overwrite already scraped entries
         """
         self._client = client
         self._stop_when_present = stop_when_present
         self._user_agent = user_agent
         self._dry_run = dry_run
+        self._overwrite = overwrite
         self._status = collections.Counter()
 
     def Run(self, root_url):
@@ -90,7 +93,8 @@ class Scraper(object):
         if self._client.get(key):
             logging.info("Already saved", page_url)
             self._status["present"] += 1
-            return self._stop_when_present, None
+            if not self._overwrite:
+                return self._stop_when_present, None
         entity = datastore.Entity(
             key,
             exclude_from_indexes=["VideoLink", "AudioLink", "source"])
@@ -162,6 +166,7 @@ if __name__ == "__main__":
     parser.add_argument("--dry_run", help="Dry runs will not import parsed pages in the datastore.", action="store_true")
     parser.add_argument("--user_agent", help="user agent string to use, be nice and tell other people why they are being scraped.")
     parser.add_argument("--stop_when_present", help="Stop crawl when the first already imported item is found (useful after the first run).", action="store_true")
+    parser.add_argument("--overwrite", help="Overwrite already imported entries.", action="store_true")
     parser.add_argument("--root_url", help="Root URL to start the crawl from.", default="http://www.college-de-france.fr/components/search-audiovideo.jsp?fulltext=&siteid=1156951719600&lang=FR&type=audio")
     args = parser.parse_args()
     logging.basicConfig(format='%(levelname)s %(asctime)s %(message)s', level=logging.DEBUG)
@@ -169,5 +174,10 @@ if __name__ == "__main__":
     locale.setlocale(locale.LC_ALL, 'fr_FR.UTF-8')
     logging.info("Creating client for project %s", args.project_id)
     client = datastore.Client(args.project_id)
-    s = Scraper(client, args.stop_when_present, args.user_agent, args.dry_run)
+    s = Scraper(
+        client,
+        args.stop_when_present,
+        args.user_agent,
+        args.dry_run,
+        args.overwrite)
     s.Run(args.root_url)

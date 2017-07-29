@@ -20,7 +20,8 @@ class TestScraper(unittest.TestCase):
             self._mock_client,
             True, # stop_when_present
             'Morzina',
-            False) # dry_run
+            False, # dry_run
+            False) # overwrite
         self._headers = {'User-Agent': 'Morzina'}
         # HTML copy pasted almost verbatim (minus noisy head tags).
         self._page_io = io.StringIO("""
@@ -170,6 +171,19 @@ class TestScraper(unittest.TestCase):
         stop_when_present, _ = self._scraper._ParsePage("http:///page/url")
         self.assertTrue(stop_when_present)
         self._mock_client.put.assert_not_called()
+
+    def test_already_scraped_overwrite(self, mock_url_open):
+        self._scraper = scraper.Scraper(
+            self._mock_client,
+            True, # stop_when_present
+            'Morzina',
+            False, # dry_run
+            True) # overwrite
+        mock_url_open.return_value = self._page_io
+        self._mock_client.get.return_value = "something not None"
+        stop_when_present, ent = self._scraper._ParsePage("http:///page/url")
+        self.assertFalse(stop_when_present)
+        self._mock_client.put.assert_called_once_with(ent)
 
     def testNoAudioLink(self, mock_url_open):
         mock_url_open.return_value = io.StringIO("an empty page")

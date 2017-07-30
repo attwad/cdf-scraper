@@ -62,36 +62,36 @@ class Scraper(object):
         # Skip lessons without audio.
         audio_link = s.find("li", "audio")
         if not audio_link:
-            logging.info("No audio link @", page_url)
+            logging.warning("No audio link @ %s", page_url)
             self._status["no_audio"] += 1
             return False, None
         audio_link = audio_link.find("a").get("href")
         # Find key parts.
         try:
-            lecturer = list(s.find("h3", "lecturer").children)[0]
+            lecturer = str(list(s.find("h3", "lecturer").children)[0]).strip()
         except (IndexError, AttributeError):
-            logging.info("No lecturer found, skipping")
+            logging.warning("No lecturer found, skipping")
             self._status["no_key"] += 1
             return False, None
         try:
             date = s.find("span", "day").text.strip()
         except AttributeError:
-            logging.info("No date found, skipping")
+            logging.warning("No date found, skipping")
             self._status["no_key"] += 1
             return False, None
         try:
             hour_start = s.find("span", "from").text.strip()
         except AttributeError:
-            logging.info("No start hour found, skipping")
+            logging.warning("No start hour found, skipping")
             self._status["no_key"] += 1
             return False, None
         # A single person cannot give two lessons starting at the same time
-        # so hopefully this is a less brittle proxy than the audio link that
-        # could change anytime.
+        # so hopefully this is a less brittle primary key than the audio link
+        # or source url that could change anytime.
         key = self._client.key('Entry', "|".join([lecturer, date, hour_start]))
         # If we already have it, skip.
         if self._client.get(key):
-            logging.info("Already saved", page_url)
+            logging.info("Already saved %s", page_url)
             self._status["present"] += 1
             if not self._overwrite:
                 return self._stop_when_present, None
@@ -131,10 +131,29 @@ class Scraper(object):
             self._status["no_function"] += 1
             pass
 
+        # Parse duration of the audio.
+        try:
+            hour_end = s.find("span", "to").text.strip()
+            time_from = time.strptime(hour_start, "%H:%M")
+            time_end = time.strptime(hour_end, "%H:%M")
+            entity["DurationSec"] = (
+                (
+                    datetime.timedelta(
+                        hours=time_end.tm_hour, minutes=time_end.tm_min)
+                    - datetime.timedelta(
+                        hours=time_from.tm_hour, minutes=time_from.tm_min)
+                ).total_seconds())
+        except (AttributeError, ValueError):
+            logging.info("No end or wrong hour found, skipping")
+            self._status["no_duration"] += 1
+            return False, None
+
         video_link = s.find("li", "video")
         if video_link:
             entity["VideoLink"] = video_link.find("a").get("href")
             self._status["has_video"] += 1
+
+        # Save entity finally.
         if not self._dry_run:
             self._client.put(entity)
         else:

@@ -6,6 +6,7 @@ from unittest.mock import call
 from unittest.mock import MagicMock
 import io
 import locale
+import logging
 import time
 import datetime
 
@@ -98,7 +99,7 @@ class TestScraper(unittest.TestCase):
         </ul></div>
         	</div>
         <div class="block metadata">
-        		<h3 class="lecturer">Alain Wijffels<span class="function">Historien du droit, Professeur aux universités de Leyde, Louvain et Louvain-la-Neuve, directeur de recherche CNRS</span>
+        		<h3 class="lecturer"> Alain Wijffels<span class="function">Historien du droit, Professeur aux universités de Leyde, Louvain et Louvain-la-Neuve, directeur de recherche CNRS</span>
         		</h3>
         <div class="date-place event-past">
         <span class="date">
@@ -200,6 +201,7 @@ class TestScraper(unittest.TestCase):
         self.assertEqual("http:///page/url", ent["Source"])
         self.assertTrue(ent["Scraped"])
         self.assertEqual("Pour une culture juridique européenne", ent["Title"])
+        self.assertEqual(3600, ent["DurationSec"])
         self.assertEqual("Pour une culture juridique européenne", ent["TypeTitle"])
         self.assertEqual('Alain Wijffels', ent["Lecturer"])
         self.assertEqual(
@@ -214,5 +216,6 @@ class TestScraper(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    logging.basicConfig(format='%(levelname)s %(asctime)s %(message)s', level=logging.DEBUG)
     locale.setlocale(locale.LC_ALL, 'fr_FR.UTF-8')
     unittest.main()

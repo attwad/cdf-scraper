@@ -136,7 +136,8 @@ class Scraper(object):
             hour_end = s.find("span", "to").text.strip()
             time_from = time.strptime(hour_start, "%H:%M")
             time_end = time.strptime(hour_end, "%H:%M")
-            entity["DurationSec"] = (
+            # There are no lessons that ends the next day so this works.
+            entity["DurationSec"] = int(
                 (
                     datetime.timedelta(
                         hours=time_end.tm_hour, minutes=time_end.tm_min)
@@ -145,6 +146,7 @@ class Scraper(object):
                 ).total_seconds())
         except (AttributeError, ValueError):
             logging.info("No end or wrong hour found, skipping")
+            # TODO: Fix to 1H ? there are 2k source urls without end time...
             self._status["no_duration"] += 1
             return False, None
 

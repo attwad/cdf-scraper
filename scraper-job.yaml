@@ -15,7 +15,7 @@ spec:
           secretName: scraper-datastore-key
       containers:
       - name: scraper
-        image: eu.gcr.io/college-de-france/scraper:latest
+        image: eu.gcr.io/college-de-france/scraper:prod
         volumeMounts:
         - name: google-cloud-key
           mountPath: /var/secrets/google

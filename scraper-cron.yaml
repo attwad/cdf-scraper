@@ -1,0 +1,28 @@
+apiVersion: batch/v2alpha1
+kind: CronJob
+metadata:
+  name: scraper-cron
+spec:
+  # Run at midnight every day.
+  schedule: "0 0 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          concurrencyPolicy: Forbid
+          volumes:
+          - name: google-cloud-key
+            secret:
+              secretName: scraper-datastore-key
+          containers:
+          - name: scraper
+            image: eu.gcr.io/college-de-france/scraper:prod
+            volumeMounts:
+            - name: google-cloud-key
+              mountPath: /var/secrets/google
+            env:
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: /var/secrets/google/key.json
+            command: ["python"]
+            args: ["/scraper/scraper.py", "--project_id=college-de-france", "--user_agent=https://github.com/attwad/cdf-scraper", "--stop_when_present"]

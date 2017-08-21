@@ -44,6 +44,7 @@ class Scraper(object):
         for page in self._CollectPages(root_url):
             should_break_early, entity = self._ParsePage(page)
             if should_break_early:
+                logging.info("Early exit as already scraped page has been found")
                 break
             logging.debug("Saved entity: %s", entity)
             logging.info(self._status)

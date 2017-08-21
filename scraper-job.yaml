@@ -23,4 +23,4 @@ spec:
         - name: GOOGLE_APPLICATION_CREDENTIALS
           value: /var/secrets/google/key.json
         command: ["python"]
-        args: ["/scraper/scraper.py", "--project_id=college-de-france", "--user_agent=https://github.com/attwad/cdf-scraper", "--overwrite"]
+        args: ["/scraper/scraper.py", "--project_id=college-de-france", "--user_agent=https://github.com/attwad/cdf-scraper", "--stop_when_present"]

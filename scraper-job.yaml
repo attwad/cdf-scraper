@@ -16,6 +16,10 @@ spec:
       containers:
       - name: scraper
         image: eu.gcr.io/college-de-france/scraper:prod
+        resources:
+          requests:
+            cpu: "20m"
+            memory: "250Mi"
         volumeMounts:
         - name: google-cloud-key
           mountPath: /var/secrets/google

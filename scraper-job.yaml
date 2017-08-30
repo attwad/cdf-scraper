@@ -15,7 +15,7 @@ spec:
           secretName: scraper-datastore-key
       containers:
       - name: scraper
-        image: eu.gcr.io/college-de-france/scraper:prod
+        image: eu.gcr.io/college-de-france/scraper:prod-v1.0.0
         resources:
           requests:
             cpu: "20m"

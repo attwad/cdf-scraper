@@ -1,4 +1,5 @@
 from urllib import request
+from urllib import robotparser
 import unittest
 from unittest.mock import patch
 from unittest.mock import create_autospec
@@ -17,12 +18,15 @@ from google.cloud import datastore
 class TestScraper(unittest.TestCase):
     def setUp(self):
         self._mock_client = create_autospec(datastore.Client)
+        self._mock_robot = create_autospec(robotparser.RobotFileParser)
+        self._mock_robot.can_fetch.return_value = True
         self._scraper = scraper.Scraper(
             self._mock_client,
             True, # stop_when_present
             'Morzina',
             False, # dry_run
-            False) # overwrite
+            False, # overwrite
+            self._mock_robot)
         self._headers = {'User-Agent': 'Morzina'}
         # HTML copy pasted almost verbatim (minus noisy head tags).
         self._page_io = io.StringIO("""
@@ -173,13 +177,21 @@ class TestScraper(unittest.TestCase):
         self.assertTrue(stop_when_present)
         self._mock_client.put.assert_not_called()
 
+    def test_robot_txt_disallowed(self, mock_url_open):
+        self._mock_robot.can_fetch.return_value = False
+        stop_when_present, entity = self._scraper._ParsePage("http:///page/url")
+        self.assertFalse(stop_when_present)
+        self.assertFalse(entity)
+        self._mock_client.put.assert_not_called()
+
     def test_already_scraped_overwrite(self, mock_url_open):
         self._scraper = scraper.Scraper(
             self._mock_client,
             True, # stop_when_present
             'Morzina',
             False, # dry_run
-            True) # overwrite
+            True, # overwrite
+            self._mock_robot)
         mock_url_open.return_value = self._page_io
         self._mock_client.get.return_value = "something not None"
         stop_when_present, ent = self._scraper._ParsePage("http:///page/url")

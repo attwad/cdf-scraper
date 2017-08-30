@@ -1,5 +1,5 @@
 from urllib import request
-from urllib import parse
+from urllib import robotparser
 import argparse
 import time
 import datetime
@@ -23,14 +23,18 @@ def _trimmed_text(node):
 
 class Scraper(object):
     def __init__(
-        self, client, stop_when_present, user_agent, dry_run, overwrite):
+        self, client, stop_when_present, user_agent, dry_run, overwrite,
+        robot_parser):
         """
         Args:
             client: a datastore.Client instance
             page_url: the url of the page to parse
-            stop_when_present: whether to stop the crawl when the url has already been imported in the datastore
+            stop_when_present: whether to stop the crawl when the url has
+                already been imported in the datastore
             dry_run: dry run will not import scraped pages into the datastore.
             overwrite: whether to overwrite already scraped entries
+            robot_parser: a robotparser.RobotFileParser to use and respect
+                robots.txt directives.
         """
         self._client = client
         self._stop_when_present = stop_when_present
@@ -38,8 +42,12 @@ class Scraper(object):
         self._dry_run = dry_run
         self._overwrite = overwrite
         self._status = collections.Counter()
+        self._robot = robot_parser
 
     def Run(self, root_url):
+        logging.info("Parsing robots.txt")
+        self._robot.set_url("http://www.college-de-france.fr/robots.txt")
+        self._robot.read()
         logging.info("Starting collection of pages from root URL %s", root_url)
         for page in self._CollectPages(root_url):
             should_break_early, entity = self._ParsePage(page)
@@ -56,6 +64,10 @@ class Scraper(object):
             A tuple (bool, entity) that contains whether the crawl should stop and the entity that was imported in the datastore if any.
         """
         logging.info("Parsing page %s", page_url)
+        if not self._robot.can_fetch(self._user_agent, page_url):
+            logging.info("Fetch of url disallowed by robots.txt")
+            self._status["disallowed"] += 1
+            return False, None
         resp = request.urlopen(
             request.Request(
                 page_url, headers={'User-Agent': self._user_agent}))
@@ -172,6 +184,8 @@ class Scraper(object):
         Yields:
             pages urls to individual lessons
         """
+        if not self._robot.can_fetch(self._user_agent, url):
+            logging.warning("Fetch of root url disallowed by robots.txt")
         maybe_more_content = True
         num_pages = 0
         while maybe_more_content:
@@ -207,5 +221,6 @@ if __name__ == "__main__":
         args.stop_when_present,
         args.user_agent,
         args.dry_run,
-        args.overwrite)
+        args.overwrite,
+        robotparser.RobotFileParser())
     s.Run(args.root_url)

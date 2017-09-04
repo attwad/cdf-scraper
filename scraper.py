@@ -103,9 +103,14 @@ class Scraper(object):
         # or source url that could change anytime.
         key = self._client.key('Entry', "|".join([lecturer, date, hour_start]))
         # If we already have it, skip.
-        if self._client.get(key):
+        previous_entity = self._client.get(key)
+        if previous_entity:
             logging.info("Already saved %s", page_url)
             self._status["present"] += 1
+            # Only overwrite entities which are not converted yet.
+            if self._overwrite and previous_entity.get("Converted"):
+                return False, None
+            # Bail if we do not want to overwrite existing entities.
             if not self._overwrite:
                 return self._stop_when_present, None
         entity = datastore.Entity(
@@ -113,6 +118,10 @@ class Scraper(object):
             exclude_from_indexes=["VideoLink", "AudioLink", "source"])
         entity.update({
             "Source": page_url,
+            # We need those two here to index them and efficiently schedule
+            # random lessons for transcription.
+            "Scheduled": False,
+            "Converted": False,
             # A random seed to be able to schedule random items.
             "Hash": hashlib.sha1(page_url.encode("utf-8")).digest(),
             "Scraped": datetime.datetime.utcnow(),
@@ -208,7 +217,7 @@ if __name__ == "__main__":
     parser.add_argument("--dry_run", help="Dry runs will not import parsed pages in the datastore.", action="store_true")
     parser.add_argument("--user_agent", help="user agent string to use, be nice and tell other people why they are being scraped.")
     parser.add_argument("--stop_when_present", help="Stop crawl when the first already imported item is found (useful after the first run).", action="store_true")
-    parser.add_argument("--overwrite", help="Overwrite already imported entries.", action="store_true")
+    parser.add_argument("--overwrite", help="Overwrite already imported entries if they are not converted already.", action="store_true")
     parser.add_argument("--root_url", help="Root URL to start the crawl from.", default="http://www.college-de-france.fr/components/search-audiovideo.jsp?fulltext=&siteid=1156951719600&lang=FR&type=audio")
     args = parser.parse_args()
     logging.basicConfig(format='%(levelname)s %(asctime)s %(message)s', level=logging.DEBUG)

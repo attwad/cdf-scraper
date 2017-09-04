@@ -8,6 +8,13 @@ spec:
       labels:
         app: scraper
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: cloud.google.com/gke-preemptible
+                operator: Exists
       restartPolicy: Never
       volumes:
       - name: google-cloud-key
@@ -15,7 +22,7 @@ spec:
           secretName: scraper-datastore-key
       containers:
       - name: scraper
-        image: eu.gcr.io/college-de-france/scraper:prod-v1.0.0
+        image: eu.gcr.io/college-de-france/scraper:prod-v1.0.1
         resources:
           requests:
             cpu: "20m"
